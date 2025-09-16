@@ -386,11 +386,11 @@ if __name__ == "__main__":
     best_reward = None
 
     if use_cuda:
-      checkpoint = torch.load(BASELINE_PATH)
+      checkpoint = torch.load(BASELINE_PATH, weights_only=False)
       baseline_model.load_state_dict(checkpoint['state_dict'])
 
     else:
-      checkpoint = torch.load(BASELINE_PATH, map_location=lambda storage, loc: storage)
+      checkpoint = torch.load(BASELINE_PATH, map_location=lambda storage, loc: storage, weights_only=False)
       baseline_model.load_state_dict(checkpoint['state_dict'])
 
     print('Baseline Model: loaded')
@@ -399,7 +399,7 @@ if __name__ == "__main__":
 
     if TRANSFER_LEARNING: # transfer learning set this variable to True
       if use_cuda:
-        checkpoint = torch.load(PATH)
+        checkpoint = torch.load(PATH, weights_only=False)
         model.load_state_dict(checkpoint['state_dict'])
         #optimizer.load_state_dict(checkpoint['optimizer'])
         test_rewards=checkpoint['test_rewards']
@@ -408,7 +408,7 @@ if __name__ == "__main__":
         best_reward=test_rewards[-1]
 
       else:
-        checkpoint = torch.load(PATH, map_location=lambda storage, loc: storage)
+        checkpoint = torch.load(PATH, map_location=lambda storage, loc: storage, weights_only=False)
         model.load_state_dict(checkpoint['state_dict'])
         #optimizer.load_state_dict(checkpoint['optimizer'])
         test_rewards=checkpoint['test_rewards']
