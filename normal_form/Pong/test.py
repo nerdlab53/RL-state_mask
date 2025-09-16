@@ -30,7 +30,7 @@ def make_env():    # this function creates a single environment
     :param rank: (int) index of the subprocess
     """
     def _thunk():
-        env = gym.make("Pong-v0").env
+        env = gym.make("Pong-v0", render_mode="rgb_array")
         return env
     return _thunk
 
@@ -50,9 +50,13 @@ def grey_crop_resize(state): # deal with single observation
 def test_baseline(i_episode, env, baseline_model, device, record_video=False):
     if record_video:
         vid_path = "./recording/vid_base_" + str (i_episode) + ".mp4"
-        vid = video_recorder.VideoRecorder(env,path=vid_path)
-    env.seed(i_episode)
-    state = env.reset()
+        vid = video_recorder.VideoRecorder(env, path=vid_path, enabled=True)
+    reset_result = env.reset(seed=i_episode)
+    # Handle both old and new gym API
+    if isinstance(reset_result, tuple):
+        state, _ = reset_result  # New gym API returns (observation, info)
+    else:
+        state = reset_result  # Old gym API returns just observation
     state = grey_crop_resize(state)
     
     count = 0
@@ -75,7 +79,13 @@ def test_baseline(i_episode, env, baseline_model, device, record_video=False):
         action_seq.append(action)
 
         count += 1
-        next_state, reward, done, _ = env.step(action)
+        step_result = env.step(action)
+        # Handle both old and new gym API
+        if len(step_result) == 4:
+            next_state, reward, done, _ = step_result  # Old gym API
+        else:
+            next_state, reward, terminated, truncated, _ = step_result  # New gym API
+            done = terminated or truncated
 
         if reward == -1:
             total_discounted_reward = - np.power(G_GAE, count)
@@ -102,10 +112,14 @@ def test_baseline(i_episode, env, baseline_model, device, record_video=False):
 
 def test_mask(i_episode, env, baseline_model, mask_network, device):
     vid_path = "./recording/vid_mask_" + str (i_episode) + ".mp4"
-    vid = video_recorder.VideoRecorder(env,path=vid_path)
+    vid = video_recorder.VideoRecorder(env, path=vid_path, enabled=True)
 
-    env.seed(i_episode)
-    state = env.reset()
+    reset_result = env.reset(seed=i_episode)
+    # Handle both old and new gym API
+    if isinstance(reset_result, tuple):
+        state, _ = reset_result  # New gym API returns (observation, info)
+    else:
+        state = reset_result  # Old gym API returns just observation
     state = grey_crop_resize(state)
     
     count = 0
@@ -140,7 +154,13 @@ def test_mask(i_episode, env, baseline_model, mask_network, device):
         action_seq.append(action)
 
         count += 1
-        next_state, reward, done, _ = env.step(action)
+        step_result = env.step(action)
+        # Handle both old and new gym API
+        if len(step_result) == 4:
+            next_state, reward, done, _ = step_result  # Old gym API
+        else:
+            next_state, reward, terminated, truncated, _ = step_result  # New gym API
+            done = terminated or truncated
 
         done = reward
 
@@ -160,14 +180,10 @@ H_SIZE = 256
 
 N_TESTS = 500
 
-"""
-if os.path.isdir("recording"):
-    os.system("rm -rf recording")
-
-
-os.system("mkdir recording")
-"""
-env = gym.make("Pong-v0").env
+# Ensure recording directory exists
+if not os.path.isdir("recording"):
+    os.makedirs("recording")
+env = gym.make("Pong-v0", render_mode="rgb_array")
 
 num_inputs = 1
 num_outputs = env.action_space.n
@@ -177,21 +193,21 @@ use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 #device = torch.device("cpu")
 
-BASELINE_PATH = "./ppo_test/baseline/Pong-v0_+0.340_100.dat"
+BASELINE_PATH = "./ppo_test/baseline/Pong-v0_+0.896_12150.dat"
 
 baseline_model = CNN(num_inputs, num_outputs, H_SIZE).to(device)
 if use_cuda:
-    checkpoint = torch.load(BASELINE_PATH)
+    checkpoint = torch.load(BASELINE_PATH, weights_only=False)
 else:
-    checkpoint = torch.load(BASELINE_PATH, map_location=torch.device('cpu'))
+    checkpoint = torch.load(BASELINE_PATH, map_location=torch.device('cpu'), weights_only=False)
 baseline_model.load_state_dict(checkpoint['state_dict'])
 
-PATH = "./ppo_test/checkpoints/Pong-v0_+0.850_7200.dat"
+PATH = "./ppo_test/masknet/Pong-v0_+0.898_19660.dat"
 mask_network = CNN(num_inputs, 2, H_SIZE).to(device)
 if use_cuda:
-    checkpoint = torch.load(PATH)
+    checkpoint = torch.load(PATH, weights_only=False)
 else:
-    checkpoint = torch.load(PATH, map_location=torch.device('cpu'))
+    checkpoint = torch.load(PATH, map_location=torch.device('cpu'), weights_only=False)
 mask_network.load_state_dict(checkpoint['state_dict'])
 
 

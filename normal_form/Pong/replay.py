@@ -28,7 +28,7 @@ def grey_crop_resize(state): # deal with single observation
     array_3d = np.expand_dims(array_2d, axis=0)
     return array_3d # C*H*W
 
-env = gym.make("Pong-v0").env
+env = gym.make("Pong-v0", render_mode="rgb_array")
 
 H_SIZE = 256
 num_inputs = 1
@@ -37,22 +37,22 @@ num_outputs = env.action_space.n
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 
-BASELINE_PATH = "./ppo_test/baseline/Pong-v0_+0.340_100.dat"
-PATH = "./ppo_test/checkpoints/Pong-v0_+0.850_7200.dat"
+BASELINE_PATH = "./ppo_test/baseline/Pong-v0_+0.896_12150.dat"
+PATH = "./ppo_test/masknet/Pong-v0_+0.898_19660.dat"
 
 baseline_model = CNN(num_inputs, num_outputs, H_SIZE).to(device)
 if use_cuda:
-    checkpoint = torch.load(BASELINE_PATH)
+    checkpoint = torch.load(BASELINE_PATH, weights_only=False)
 else:
-    checkpoint = torch.load(BASELINE_PATH, map_location=torch.device('cpu'))
+    checkpoint = torch.load(BASELINE_PATH, map_location=torch.device('cpu'), weights_only=False)
 baseline_model.load_state_dict(checkpoint['state_dict'])
 
 #PATH = "./ppo_test/checkpoints/Pong-v0_+19.600_7380.dat"
 mask_network = CNN(num_inputs, 2, H_SIZE).to(device)
 if use_cuda:
-    checkpoint = torch.load(PATH)
+    checkpoint = torch.load(PATH, weights_only=False)
 else:
-    checkpoint = torch.load(PATH, map_location=torch.device('cpu'))
+    checkpoint = torch.load(PATH, map_location=torch.device('cpu'), weights_only=False)
 mask_network.load_state_dict(checkpoint['state_dict'])
 
 replay_rewards = []
@@ -70,7 +70,12 @@ for i_episode in range(500):
     vid = video_recorder.VideoRecorder(env,path=vid_path)
 
     env.seed(i_episode)
-    state = env.reset()
+    reset_result = env.reset()
+    # Handle both old and new gym API
+    if isinstance(reset_result, tuple):
+        state, _ = reset_result  # New gym API returns (observation, info)
+    else:
+        state = reset_result  # Old gym API returns just observation
     state = grey_crop_resize(state)
     
     count = 0
@@ -84,10 +89,22 @@ for i_episode in range(500):
         state = torch.FloatTensor(np.copy(state)).unsqueeze(0).to(device)
 
         if count < critical_steps_starts[i_episode]:
-            next_state, reward, done, _ = env.step(int(recorded_actions[count]))
+            step_result = env.step(int(recorded_actions[count]))
+            # Handle both old and new gym API
+            if len(step_result) == 4:
+                next_state, reward, done, _ = step_result  # Old gym API
+            else:
+                next_state, reward, terminated, truncated, _ = step_result  # New gym API
+                done = terminated or truncated
         
         elif count <= critical_steps_ends[i_episode]:
-            next_state, reward, done, _ = env.step(np.random.choice(6))
+            step_result = env.step(np.random.choice(6))
+            # Handle both old and new gym API
+            if len(step_result) == 4:
+                next_state, reward, done, _ = step_result  # Old gym API
+            else:
+                next_state, reward, terminated, truncated, _ = step_result  # New gym API
+                done = terminated or truncated
         
         else:
             baseline_dist, _ = baseline_model(state)
@@ -104,7 +121,13 @@ for i_episode in range(500):
             else:
                 action = np.random.choice(6)
                 
-            next_state, reward, done, _ = env.step(action)
+            step_result = env.step(action)
+            # Handle both old and new gym API
+            if len(step_result) == 4:
+                next_state, reward, done, _ = step_result  # Old gym API
+            else:
+                next_state, reward, terminated, truncated, _ = step_result  # New gym API
+                done = terminated or truncated
 
         count += 1
         
