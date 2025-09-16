@@ -35,8 +35,8 @@ T_EPOCHS = 50 # each T_EPOCH
 N_TESTS = 20 # do N_TESTS tests
 TARGET_REWARD = 0.9
 TRANSFER_LEARNING = False
-#BASELINE_PATH = "./ppo_test/baseline/Pong-v0_+0.896_12150.dat"
-BASELINE_PATH = "./ppo_test/baseline/Pong-v0_+0.340_100.dat"
+BASELINE_PATH = "./ppo_test/baseline/Pong-v0_+0.896_12150.dat"
+# BASELINE_PATH = "./ppo_test/baseline/Pong-v0_+0.340_100.dat"
 #PATH = "./ppo_test/checkpoints/Pong-v0_+0.855_19700.dat"
 class CNN(nn.Module):
     def __init__(self, num_inputs, num_outputs, hidden_size):
