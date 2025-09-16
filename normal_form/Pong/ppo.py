@@ -304,7 +304,7 @@ def ppo_train(baseline_model, model, envs, device, use_cuda, test_rewards, test_
 
             next_state, reward, done, _ = envs.step(real_actions)
             for i in range(N):
-                disc_rewards[i] += (G_GAE ** t) * reward
+                disc_rewards[i] += (G_GAE ** t) * reward[i]
             next_state = grey_crop_resize_batch(next_state) # simplify perceptions (grayscale-> crop-> resize) to train CNN
             log_prob = dist.log_prob(action) # needed to compute probability ratio r(theta) that prevent policy to vary too much probability related to each action (make the computations more robust)
             log_prob_vect = log_prob.reshape(len(log_prob), 1) # transpose from row to column
