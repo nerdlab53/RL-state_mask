@@ -88,10 +88,10 @@ def test_baseline(i_episode, env, baseline_model, device, record_video=False):
             done = terminated or truncated
 
         if reward == -1:
-            total_discounted_reward = - np.power(G_GAE, count)
+            total_discounted_reward = - (G_GAE ** count)
             break
         elif reward == 1:
-            total_discounted_reward = np.power(G_GAE, count)
+            total_discounted_reward = (G_GAE ** count)
             total_reward += reward
             break
 

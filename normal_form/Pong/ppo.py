@@ -37,7 +37,7 @@ TARGET_REWARD = 0.9
 TRANSFER_LEARNING = False
 BASELINE_PATH = "./ppo_test/baseline/Pong-v0_+0.896_12150.dat"
 # BASELINE_PATH = "./ppo_test/baseline/Pong-v0_+0.340_100.dat"
-#PATH = "./ppo_test/checkpoints/Pong-v0_+0.855_19700.dat"
+PATH = "./ppo_test/checkpoints/Pong-v0_+0.855_19700.dat"
 class CNN(nn.Module):
     def __init__(self, num_inputs, num_outputs, hidden_size):
         super(CNN, self).__init__()
@@ -128,7 +128,7 @@ def test_env(i_episode, env, baseline_model, model, device):
         return 0
 
 def plot(train_epoch, rewards, save=True):
-    clear_output(True)
+    # clear_output(True)  # Commented out - IPython function not available in this context
     plt.close('all')
     fig = plt.figure()
     fig = plt.ion()
@@ -304,7 +304,7 @@ def ppo_train(baseline_model, model, envs, device, use_cuda, test_rewards, test_
 
             next_state, reward, done, _ = envs.step(real_actions)
             for i in range(N):
-                disc_rewards[i] += np.pow(G_GAE, t) * reward
+                disc_rewards[i] += (G_GAE ** t) * reward
             next_state = grey_crop_resize_batch(next_state) # simplify perceptions (grayscale-> crop-> resize) to train CNN
             log_prob = dist.log_prob(action) # needed to compute probability ratio r(theta) that prevent policy to vary too much probability related to each action (make the computations more robust)
             log_prob_vect = log_prob.reshape(len(log_prob), 1) # transpose from row to column
